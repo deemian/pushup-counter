@@ -1,0 +1,163 @@
+/* 
+Welcome to my pushups counter! This program can count how many pushups you do, so you don't have to. It can display up to 
+999 pushups (this could be exponentially more depending on how many digits you add). 
+Red light means the last digit, Blue light means the 2nd last digit and Green light means the third last digit. 
+So if pixel 1 is red, pixel 3 is blue and pixel 5 is green, it means 531. If 2 or 3 digits happen to be the same number, 
+that pixel will start alternating between the relevant colors to show that both colors are on that pixel.
+*/
+
+
+let inFront = false //this variable is set to true when it detects something in front of the detector
+let distance = 0 //this is the distance between the detector and the nearest object
+let pushups = 0 //amount of pushups tracked
+
+let ones = 0 //this is the last digit of the amount of pushups, so will always be 0-9. Used for display (red lights)
+let tens = 0 //this is the second to last digit of the pushups, so will always be 0-9. Used for display (blue lights)
+let hundreds = 0 //this is the third to last digit of the pushups, so will always be 0-9. Used for display (green lights)
+
+let allThree = false //this will be true if all 3 digits are the same number, used later on
+
+// this resets your pushups: turns off the lights, and sets all digits to 0
+input.buttonA.onEvent(ButtonEvent.LongClick, function () {
+    pushups = 0
+    ones = 0
+    tens = 0
+    hundreds = 0
+    console.logValue("pushups:", pushups)
+    light.setAll(0)
+})
+
+// this removes 1 from your pushups count
+input.buttonB.onEvent(ButtonEvent.Click, function () {
+    if (pushups > 0) {
+
+        //this turns off the lights that were on
+        light.setAll(0)
+
+        //removes 1 from your pushups and from ones (last digit)
+        pushups--
+        ones--
+
+        //sets ones to 9 if it goes below 0
+        if (ones === -1) {
+            ones = 9
+            tens--
+
+        }
+
+        //sets tens (2nd to last digit) to 9 if it goes below 0
+        if (tens === -1) {
+            tens = 9
+            hundreds--
+
+        }
+
+        // turns ON all the lights with the correct color on the correct spot
+        light.setPixelColor(ones - 1, Colors.Red)
+        light.setPixelColor(tens - 1, Colors.Blue)
+        light.setPixelColor(hundreds - 1, Colors.Green)
+    }
+})
+
+loops.forever(function () {
+    //this constantly tracks the distance between the detector and the nearest object, and sets the variable 'distance' to that
+    pins.A2.digitalWrite(false)
+    control.waitMicros(2)
+    pins.A2.digitalWrite(true)
+    control.waitMicros(10)
+    pins.A2.digitalWrite(false)
+
+    distance = pins.A3.pulseIn(PulseValue.High) / 58
+
+    // if distance is lower than 20, a pushup happened:
+    if (distance < 20) {
+
+        // the inFront variable stops the program from constantly adding one if 'distance' is continuesly lower than 20
+        if (inFront === false) {
+            inFront = true
+
+            //turn off all lights
+            light.setAll(0)
+
+            //add 1 to pushups and 1 to ones
+            pushups++
+            ones++
+            console.logValue("pushups:", pushups)
+
+
+            // when ones is higher than 9, remove 10 to correct it
+            if (ones > 9) {
+                ones -= 10
+                tens++
+            }
+
+            // when tens is higher than 9, remove 10 to correct it
+            if (tens > 9) {
+                tens -= 10
+                hundreds++
+            }
+
+            // this turns on the next lights with the correct color and on the correct spot
+            light.setPixelColor(ones - 1, Colors.Red)
+            light.setPixelColor(tens - 1, Colors.Blue)
+            light.setPixelColor(hundreds - 1, Colors.Green)
+        }
+
+        // 1 second delay to stop the program from adding too many pushups
+        loops.pause(1000)
+
+        //when distance is no longer lower than 20, set inFront to false so the program can trigger again
+    } else {
+        inFront = false
+    }
+})
+
+
+// this part makes it so that when there's multiple lights on the same pixel, they start alternating
+// so that you can show multiple different color lights on the same pixel
+loops.forever(function () {
+    if (ones === tens && ones !== 0 && allThree === false) {
+        pause(10)
+        light.setPixelColor(ones - 1, Colors.Blue)
+        pause(300)
+        light.setPixelColor(ones - 1, Colors.Red)
+        pause(300)
+
+
+    }
+
+    if (ones === hundreds && ones !== 0 && allThree === false) {
+        pause(10)
+        light.setPixelColor(ones - 1, Colors.Green)
+        pause(300)
+        light.setPixelColor(ones - 1, Colors.Red)
+        pause(300)
+    }
+
+    if (tens === hundreds && tens !== 0 && allThree === false) {
+        pause(10)
+        light.setPixelColor(tens - 1, Colors.Green)
+        pause(300)
+        light.setPixelColor(tens - 1, Colors.Blue)
+        pause(300)
+    }
+
+
+    // when all 3 digits are the same number, allThree gets set to true, so the other alternating parts dont interfere with this one
+
+    if (ones === tens && tens === hundreds && ones !== 0) {
+        allThree = true
+        pause(10)
+        light.setPixelColor(ones - 1, Colors.Green)
+        pause(300)
+        light.setPixelColor(ones - 1, Colors.Blue)
+        pause(300)
+        light.setPixelColor(ones - 1, Colors.Red)
+        pause(300)
+
+    } else {
+        allThree = false
+    }
+})
+
+
